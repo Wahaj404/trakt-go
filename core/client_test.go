@@ -7,7 +7,7 @@ import (
 )
 
 func TestMakeClient(t *testing.T) {
-	client := MakeClient("appName", "appVersion", "apiKey", 2)
+	client := NewClient("appName", "appVersion", "apiKey", 2)
 	assert.Equal(
 		t,
 		map[string]string{
