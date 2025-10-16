@@ -18,4 +18,5 @@ func TestMakeClient(t *testing.T) {
 		},
 		client.headers,
 	)
+	assert.Equal(t, "https://api.trakt.tv", client.baseUrl)
 }
