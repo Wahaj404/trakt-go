@@ -11,7 +11,7 @@ import (
 
 type Client struct {
 	headers map[string]string
-	schema  string
+	scheme  string
 	baseUrl string
 }
 
@@ -30,7 +30,7 @@ func NewClient(appName string, appVersion string, apiKey string, apiVersion int)
 
 func (c *Client) constructUrl(path string, queryParams map[string]any) string {
 	u := url.URL{
-		Scheme: c.schema,
+		Scheme: c.scheme,
 		Host: c.baseUrl,
 		Path: path,
 	}

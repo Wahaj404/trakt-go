@@ -18,6 +18,6 @@ func TestMakeClient(t *testing.T) {
 		},
 		client.headers,
 	)
-	assert.Equal(t, "https", client.schema)
+	assert.Equal(t, "https", client.scheme)
 	assert.Equal(t, "api.trakt.tv", client.baseUrl)
 }
