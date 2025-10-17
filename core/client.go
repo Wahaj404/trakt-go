@@ -1,8 +1,6 @@
 package core
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -44,13 +42,12 @@ func (c *Client) constructUrl(path string, queryParams map[string]any) string {
 }
 
 func (c *Client) do(method, path string, queryParams, payload map[string]any) (map[string]any, error) {
-	serializedPayload, err := json.Marshal(payload)
+	serializedPayload, err := util.SerializeRequest(payload)
 	if err != nil {
 		return nil, err
 	}
-	payloadBuffer := bytes.NewBuffer(serializedPayload)
 
-	req, err := http.NewRequest(method, c.constructUrl(path, queryParams), payloadBuffer)
+	req, err := http.NewRequest(method, c.constructUrl(path, queryParams), serializedPayload)
 	if err != nil {
 		return nil, err
 	}
