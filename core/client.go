@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
+
+	"trakt-go/util"
 )
 
 type Client struct {
@@ -61,16 +62,7 @@ func (c *Client) do(method, path string, queryParams, payload map[string]any) (m
 	if err != nil {
 		return nil, err
 	}
-
-	defer resp.Body.Close()
-	responseBuffer, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	responseBody := make(map[string]any)
-	json.Unmarshal(responseBuffer, &responseBody)
-
-	return responseBody, nil
+	return util.DeserializeResponse(resp)
 }
 
 func (c *Client) Get(path string, queryParams map[string]any) (map[string]any, error) {
