@@ -4,6 +4,7 @@ import "fmt"
 
 type Client struct {
 	headers map[string]string
+	schema  string
 	baseUrl string
 }
 
@@ -15,6 +16,7 @@ func NewClient(appName string, appVersion string, apiKey string, apiVersion int)
 			"trakt-api-key":     apiKey,
 			"trakt-api-version": fmt.Sprintf("%d", apiVersion),
 		},
-		"https://api.trakt.tv",
+		"https",
+		"api.trakt.tv",
 	}
 }
