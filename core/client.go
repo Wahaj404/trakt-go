@@ -31,8 +31,8 @@ func NewClient(appName string, appVersion string, apiKey string, apiVersion int)
 func (c *Client) constructUrl(path string, queryParams map[string]any) string {
 	u := url.URL{
 		Scheme: c.scheme,
-		Host: c.baseUrl,
-		Path: path,
+		Host:   c.baseUrl,
+		Path:   path,
 	}
 	qParams := url.Values{}
 	for k, v := range queryParams {
