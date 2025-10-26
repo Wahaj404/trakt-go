@@ -19,11 +19,11 @@ type Client struct {
 	baseUrl string
 }
 
-func NewClient(appName string, appVersion string, apiKey string, apiVersion int) *Client {
+func NewClient(appName, appVersion, apiKey string, apiVersion int) *Client {
 	return newClientWithConfig(appName, appVersion, apiKey, apiVersion, &TraktApiConfig{})
 }
 
-func newClientWithConfig(appName string, appVersion string, apiKey string, apiVersion int, config ITraktApiConfig) *Client {
+func newClientWithConfig(appName, appVersion, apiKey string, apiVersion int, config ITraktApiConfig) *Client {
 	return &Client{
 		map[string]string{
 			"Content-Type":      "application/json",
