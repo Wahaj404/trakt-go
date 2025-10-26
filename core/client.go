@@ -47,7 +47,7 @@ func (c *Client) constructUrl(path string, queryParams map[string]any) string {
 }
 
 func (c *Client) do(method, path string, queryParams, payload map[string]any) (*ApiResponse, error) {
-	serializedPayload, err := util.SerializeRequest(payload)
+	serializedPayload, err := util.Serialize(payload)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (c *Client) do(method, path string, queryParams, payload map[string]any) (*
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := util.DeserializeResponse(resp)
+	responseBody, err := util.Deserialize(resp.Body)
 	if err != nil {
 		return nil, err
 	}

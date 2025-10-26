@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"net/http"
 )
 
-func SerializeRequest(payload map[string]any) (*bytes.Buffer, error) {
+func Serialize(payload map[string]any) (*bytes.Buffer, error) {
 	serializedPayload, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -15,8 +14,8 @@ func SerializeRequest(payload map[string]any) (*bytes.Buffer, error) {
 	return bytes.NewBuffer(serializedPayload), nil
 }
 
-func DeserializeResponse(resp *http.Response) (map[string]any, error) {
-	responseBuffer, err := io.ReadAll(resp.Body)
+func Deserialize(body io.ReadCloser) (map[string]any, error) {
+	responseBuffer, err := io.ReadAll(body)
 	if err != nil {
 		return nil, err
 	}
