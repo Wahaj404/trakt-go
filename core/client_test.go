@@ -40,6 +40,7 @@ func TestGet(t *testing.T) {
 	path := "/path"
 	queryParams := map[string]any{"q1": "v1"}
 	response := map[string]any{"r1": "v1"}
+
 	client, server := NewTestClientServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodGet, r.Method)
 		assert.Equal(t, path, r.URL.Path)
@@ -61,6 +62,7 @@ func TestPost(t *testing.T) {
 	queryParams := map[string]any{"q1": "v1"}
 	payload := map[string]any{"b1": "v1"}
 	response := map[string]any{"r1": "v1"}
+
 	client, server := NewTestClientServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
 		assert.Equal(t, path, r.URL.Path)
