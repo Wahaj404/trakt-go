@@ -8,6 +8,11 @@ import (
 	"trakt-go/util"
 )
 
+type ApiResponse struct {
+	StatusCode int
+	Body       map[string]any
+}
+
 type Client struct {
 	headers map[string]string
 	scheme  string
@@ -41,7 +46,7 @@ func (c *Client) constructUrl(path string, queryParams map[string]any) string {
 	return u.String()
 }
 
-func (c *Client) do(method, path string, queryParams, payload map[string]any) (map[string]any, error) {
+func (c *Client) do(method, path string, queryParams, payload map[string]any) (*ApiResponse, error) {
 	serializedPayload, err := util.SerializeRequest(payload)
 	if err != nil {
 		return nil, err
@@ -60,13 +65,18 @@ func (c *Client) do(method, path string, queryParams, payload map[string]any) (m
 		return nil, err
 	}
 	defer resp.Body.Close()
-	return util.DeserializeResponse(resp)
+
+	responseBody, err := util.DeserializeResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+	return &ApiResponse{resp.StatusCode, responseBody}, nil
 }
 
-func (c *Client) Get(path string, queryParams map[string]any) (map[string]any, error) {
+func (c *Client) Get(path string, queryParams map[string]any) (*ApiResponse, error) {
 	return c.do(http.MethodGet, path, queryParams, nil)
 }
 
-func (c *Client) Post(path string, queryParams, payload map[string]any) (map[string]any, error) {
+func (c *Client) Post(path string, queryParams, payload map[string]any) (*ApiResponse, error) {
 	return c.do(http.MethodPost, path, queryParams, payload)
 }
