@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +12,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+type MockConfig struct {
+	serverUrl string
+}
+
+func (mc *MockConfig) Scheme() string {
+	return "http"
+}
+
+func (mc *MockConfig) BaseUrl() string {
+	return strings.TrimPrefix(mc.serverUrl, fmt.Sprintf("%s://", mc.Scheme()))
+}
 
 func TestMakeClient(t *testing.T) {
 	client := NewClient("appName", "appVersion", "apiKey", 2)
@@ -30,9 +43,7 @@ func TestMakeClient(t *testing.T) {
 
 func NewTestClientServer(handler http.HandlerFunc) (*Client, *httptest.Server) {
 	server := httptest.NewServer(handler)
-	traktBaseUrl = strings.TrimPrefix(server.URL, "http://")
-	traktScheme = "http"
-	client := NewClient("test", "test", "test", 2)
+	client := newClientWithConfig("test", "test", "test", 2, &MockConfig{server.URL})
 	return client, server
 }
 

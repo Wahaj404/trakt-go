@@ -20,6 +20,10 @@ type Client struct {
 }
 
 func NewClient(appName string, appVersion string, apiKey string, apiVersion int) *Client {
+	return newClientWithConfig(appName, appVersion, apiKey, apiVersion, &TraktApiConfig{})
+}
+
+func newClientWithConfig(appName string, appVersion string, apiKey string, apiVersion int, config ITraktApiConfig) *Client {
 	return &Client{
 		map[string]string{
 			"Content-Type":      "application/json",
@@ -27,8 +31,8 @@ func NewClient(appName string, appVersion string, apiKey string, apiVersion int)
 			"trakt-api-key":     apiKey,
 			"trakt-api-version": fmt.Sprintf("%d", apiVersion),
 		},
-		traktScheme,
-		traktBaseUrl,
+		config.Scheme(),
+		config.BaseUrl(),
 	}
 }
 
