@@ -16,7 +16,6 @@ func SerializeRequest(payload map[string]any) (*bytes.Buffer, error) {
 }
 
 func DeserializeResponse(resp *http.Response) (map[string]any, error) {
-	defer resp.Body.Close()
 	responseBuffer, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err

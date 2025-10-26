@@ -59,6 +59,7 @@ func (c *Client) do(method, path string, queryParams, payload map[string]any) (m
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	return util.DeserializeResponse(resp)
 }
 
