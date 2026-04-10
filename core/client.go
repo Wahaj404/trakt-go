@@ -1,16 +1,21 @@
 package core
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 
-	"trakt-go/util"
+	"github.com/Wahaj404/trakt-go/util"
 )
 
 type ApiResponse struct {
 	StatusCode int
 	Body       map[string]any
+	Pagination *Pagination // nil if endpoint is not paginated
+	RateLimit  *RateLimit  // nil if header absent
 }
 
 type Client struct {
@@ -50,13 +55,13 @@ func (c *Client) constructUrl(path string, queryParams map[string]any) string {
 	return u.String()
 }
 
-func (c *Client) do(method, path string, queryParams, payload map[string]any) (*ApiResponse, error) {
+func (c *Client) do(ctx context.Context, method, path string, queryParams, payload map[string]any) (*ApiResponse, error) {
 	serializedPayload, err := util.Serialize(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest(method, c.constructUrl(path, queryParams), serializedPayload)
+	req, err := http.NewRequestWithContext(ctx, method, c.constructUrl(path, queryParams), serializedPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -70,17 +75,44 @@ func (c *Client) do(method, path string, queryParams, payload map[string]any) (*
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := util.Deserialize(resp.Body)
+	rawBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	return &ApiResponse{resp.StatusCode, responseBody}, nil
+
+	if resp.StatusCode >= 400 {
+		apiErr := &APIError{
+			StatusCode:      resp.StatusCode,
+			WWWAuthenticate: resp.Header.Get("WWW-Authenticate"),
+			RetryAfter:      resp.Header.Get("Retry-After"),
+			RawBody:         rawBody,
+		}
+		var errBody struct {
+			Error            string `json:"error"`
+			ErrorDescription string `json:"error_description"`
+		}
+		_ = json.Unmarshal(rawBody, &errBody)
+		apiErr.Message = errBody.Error
+		apiErr.Description = errBody.ErrorDescription
+		return nil, apiErr
+	}
+
+	responseBody := make(map[string]any)
+	if len(rawBody) > 0 {
+		_ = json.Unmarshal(rawBody, &responseBody)
+	}
+	return &ApiResponse{
+		StatusCode: resp.StatusCode,
+		Body:       responseBody,
+		Pagination: parsePagination(resp.Header),
+		RateLimit:  parseRateLimit(resp.Header),
+	}, nil
 }
 
-func (c *Client) Get(path string, queryParams map[string]any) (*ApiResponse, error) {
-	return c.do(http.MethodGet, path, queryParams, nil)
+func (c *Client) Get(ctx context.Context, path string, queryParams map[string]any) (*ApiResponse, error) {
+	return c.do(ctx, http.MethodGet, path, queryParams, nil)
 }
 
-func (c *Client) Post(path string, queryParams, payload map[string]any) (*ApiResponse, error) {
-	return c.do(http.MethodPost, path, queryParams, payload)
+func (c *Client) Post(ctx context.Context, path string, queryParams, payload map[string]any) (*ApiResponse, error) {
+	return c.do(ctx, http.MethodPost, path, queryParams, payload)
 }

@@ -1,4 +1,4 @@
-module trakt-go
+module github.com/Wahaj404/trakt-go
 
 go 1.25.3
 
