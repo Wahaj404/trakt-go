@@ -248,3 +248,81 @@ func TestAPIError_OAuthErrorShape(t *testing.T) {
 	assert.Equal(t, "invalid_grant", apiErr.Message)
 	assert.Equal(t, "The provided authorization grant is invalid.", apiErr.Description)
 }
+
+type testThing struct {
+	Name string `json:"name"`
+}
+
+func TestGetInto(t *testing.T) {
+	client, server := NewTestClientServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/thing", r.URL.Path)
+		w.Header().Set("X-Pagination-Page", "1")
+		w.Header().Set("X-Pagination-Limit", "10")
+		w.Header().Set("X-Pagination-Page-Count", "1")
+		w.Header().Set("X-Pagination-Item-Count", "1")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"name":"widget"}`))
+	}))
+	defer server.Close()
+
+	var thing testThing
+	resp, err := client.GetInto(context.Background(), "/thing", nil, &thing)
+	assert.Nil(t, err)
+	assert.Equal(t, "widget", thing.Name)
+	assert.Nil(t, resp.Body) // Body is nil when typed unmarshal is used.
+	assert.NotNil(t, resp.Pagination)
+	assert.Equal(t, 1, resp.Pagination.Page)
+}
+
+func TestGetInto_Error(t *testing.T) {
+	client, server := NewTestClientServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"error":"not found"}`))
+	}))
+	defer server.Close()
+
+	thing := testThing{Name: "unchanged"}
+	resp, err := client.GetInto(context.Background(), "/missing", nil, &thing)
+	assert.Nil(t, resp)
+	var apiErr *APIError
+	assert.True(t, errors.As(err, &apiErr))
+	assert.Equal(t, 404, apiErr.StatusCode)
+	assert.Equal(t, "not found", apiErr.Message)
+	// out should not be mutated on error.
+	assert.Equal(t, "unchanged", thing.Name)
+}
+
+func TestGetInto_NilOut(t *testing.T) {
+	client, server := NewTestClientServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"name":"widget"}`))
+	}))
+	defer server.Close()
+
+	resp, err := client.GetInto(context.Background(), "/thing", nil, nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, 200, resp.StatusCode)
+}
+
+func TestPostInto(t *testing.T) {
+	payload := map[string]any{"b1": "v1"}
+
+	client, server := NewTestClientServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/thing", r.URL.Path)
+		deserializedBody, err := util.Deserialize(r.Body)
+		assert.Nil(t, err)
+		assert.Equal(t, payload, deserializedBody)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"name":"widget"}`))
+	}))
+	defer server.Close()
+
+	var thing testThing
+	resp, err := client.PostInto(context.Background(), "/thing", nil, payload, &thing)
+	assert.Nil(t, err)
+	assert.Equal(t, "widget", thing.Name)
+	assert.Nil(t, resp.Body) // Body is nil when typed unmarshal is used.
+}

@@ -22,6 +22,8 @@ type Client struct {
 	headers map[string]string
 	scheme  string
 	baseUrl string
+
+	Movies *MoviesResource
 }
 
 func NewClient(appName, appVersion, apiKey string, apiVersion int) *Client {
@@ -29,16 +31,18 @@ func NewClient(appName, appVersion, apiKey string, apiVersion int) *Client {
 }
 
 func newClientWithConfig(appName, appVersion, apiKey string, apiVersion int, config ITraktApiConfig) *Client {
-	return &Client{
-		map[string]string{
+	c := &Client{
+		headers: map[string]string{
 			"Content-Type":      "application/json",
 			"User-Agent":        fmt.Sprintf("%s/%s", appName, appVersion),
 			"trakt-api-key":     apiKey,
 			"trakt-api-version": fmt.Sprintf("%d", apiVersion),
 		},
-		config.Scheme(),
-		config.BaseUrl(),
+		scheme:  config.Scheme(),
+		baseUrl: config.BaseUrl(),
 	}
+	c.Movies = &MoviesResource{client: c}
+	return c
 }
 
 func (c *Client) constructUrl(path string, queryParams map[string]any) string {
@@ -49,13 +53,18 @@ func (c *Client) constructUrl(path string, queryParams map[string]any) string {
 	}
 	qParams := url.Values{}
 	for k, v := range queryParams {
-		qParams.Set(k, fmt.Sprintf("%s", v))
+		qParams.Set(k, fmt.Sprintf("%v", v))
 	}
 	u.RawQuery = qParams.Encode()
 	return u.String()
 }
 
-func (c *Client) do(ctx context.Context, method, path string, queryParams, payload map[string]any) (*ApiResponse, error) {
+// do issues the HTTP request and parses the response. If out is non-nil, the
+// success body is unmarshaled into out and ApiResponse.Body is left nil (to
+// avoid a redundant second unmarshal). If out is nil, the success body is
+// unmarshaled into ApiResponse.Body as a map[string]any, matching the
+// untyped-response API used by Client.Get / Client.Post.
+func (c *Client) do(ctx context.Context, method, path string, queryParams, payload map[string]any, out any) (*ApiResponse, error) {
 	serializedPayload, err := util.Serialize(payload)
 	if err != nil {
 		return nil, err
@@ -97,9 +106,18 @@ func (c *Client) do(ctx context.Context, method, path string, queryParams, paylo
 		return nil, apiErr
 	}
 
-	responseBody := make(map[string]any)
-	if len(rawBody) > 0 {
-		_ = json.Unmarshal(rawBody, &responseBody)
+	var responseBody map[string]any
+	if out != nil {
+		if len(rawBody) > 0 {
+			if err := json.Unmarshal(rawBody, out); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		responseBody = make(map[string]any)
+		if len(rawBody) > 0 {
+			_ = json.Unmarshal(rawBody, &responseBody)
+		}
 	}
 	return &ApiResponse{
 		StatusCode: resp.StatusCode,
@@ -110,9 +128,24 @@ func (c *Client) do(ctx context.Context, method, path string, queryParams, paylo
 }
 
 func (c *Client) Get(ctx context.Context, path string, queryParams map[string]any) (*ApiResponse, error) {
-	return c.do(ctx, http.MethodGet, path, queryParams, nil)
+	return c.do(ctx, http.MethodGet, path, queryParams, nil, nil)
 }
 
 func (c *Client) Post(ctx context.Context, path string, queryParams, payload map[string]any) (*ApiResponse, error) {
-	return c.do(ctx, http.MethodPost, path, queryParams, payload)
+	return c.do(ctx, http.MethodPost, path, queryParams, payload, nil)
+}
+
+// GetInto issues a GET and decodes the JSON response body into out. out must
+// be a non-nil pointer (e.g. &movie or &movies). On a >=400 response, the
+// returned error is a *APIError and out is left untouched. On success with an
+// empty response body, out is also left untouched. Pass out=nil to skip the
+// unmarshal entirely (equivalent to Get without the untyped map).
+func (c *Client) GetInto(ctx context.Context, path string, queryParams map[string]any, out any) (*ApiResponse, error) {
+	return c.do(ctx, http.MethodGet, path, queryParams, nil, out)
+}
+
+// PostInto issues a POST and decodes the JSON response body into out. Same
+// semantics as GetInto for the out parameter.
+func (c *Client) PostInto(ctx context.Context, path string, queryParams, payload map[string]any, out any) (*ApiResponse, error) {
+	return c.do(ctx, http.MethodPost, path, queryParams, payload, out)
 }
